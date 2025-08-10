@@ -43,6 +43,37 @@ personal-finance-tracker/
 └── __tests__/            # Test files
 ```
 
+## 🚨 CRITICAL WORKFLOW - ALWAYS FOLLOW
+**BEFORE EVERY TASK:**
+1. First read tasks.md with: `cat tasks.md`
+2. Identify the current task being worked on
+3. Check task dependencies and requirements
+
+**AFTER COMPLETING WORK:**
+1. Update tasks.md to mark progress
+2. Add any new discovered tasks
+3. Update the "Current Status" section below
+
+## Current Task Status
+**Active Task:** [Initialize React Native project and core dependencies]
+**Task File:** tasks.md (line 3-9)
+**Last Updated:** [Timestamp]
+
+## Task Management Commands
+```bash
+
+Working Agreement
+When asked to implement any feature:
+
+ALWAYS first check tasks.md for the specific task details
+ALWAYS update tasks.md after completing work
+ALWAYS note any blockers or new tasks discovered
+
+Task File Location
+
+Main task list: /tasks.md
+Completed archive: /completed-tasks.md (move completed sections here)
+
 ## Key Design Patterns
 
 ### Color Palette
