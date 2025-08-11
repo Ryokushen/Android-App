@@ -55,9 +55,9 @@ personal-finance-tracker/
 3. Update the "Current Status" section below
 
 ## Current Task Status
-**Active Task:** Task 5 - Build navigation structure and main screens
-**Task File:** tasks.md (line 60-65)
-**Last Updated:** January 11, 2025 04:55 UTC
+**Active Task:** Task 6 - Implement Account Management System
+**Task File:** tasks.md (line 70-76)
+**Last Updated:** January 11, 2025 05:35 UTC
 
 ## Task Management Commands
 ```bash
