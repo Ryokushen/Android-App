@@ -3,49 +3,66 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { theme } from '@/core/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/features/auth/AuthContext';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
+import { ComponentShowcase } from '@/screens/dev/ComponentShowcase';
 
 const Tab = createBottomTabNavigator();
 
-const HomeScreen = () => (
-  <View style={styles.screen}>
-    <Text style={styles.title}>Home</Text>
-  </View>
-);
+const HomeScreen = () => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: theme.colors.background.primary }]}>
+      <Text style={[styles.title, { color: theme.colors.text.primary }]}>Home</Text>
+    </View>
+  );
+};
 
-const TransactionsScreen = () => (
-  <View style={styles.screen}>
-    <Text style={styles.title}>Transactions</Text>
-  </View>
-);
+const TransactionsScreen = () => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: theme.colors.background.primary }]}>
+      <Text style={[styles.title, { color: theme.colors.text.primary }]}>Transactions</Text>
+    </View>
+  );
+};
 
-const BudgetsScreen = () => (
-  <View style={styles.screen}>
-    <Text style={styles.title}>Budgets</Text>
-  </View>
-);
+const BudgetsScreen = () => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: theme.colors.background.primary }]}>
+      <Text style={[styles.title, { color: theme.colors.text.primary }]}>Budgets</Text>
+    </View>
+  );
+};
 
-const AccountsScreen = () => (
-  <View style={styles.screen}>
-    <Text style={styles.title}>Accounts</Text>
-  </View>
-);
+const AccountsScreen = () => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: theme.colors.background.primary }]}>
+      <Text style={[styles.title, { color: theme.colors.text.primary }]}>Accounts</Text>
+    </View>
+  );
+};
 
-const InsightsScreen = () => (
-  <View style={styles.screen}>
-    <Text style={styles.title}>Insights</Text>
-  </View>
-);
+const InsightsScreen = () => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.screen, { backgroundColor: theme.colors.background.primary }]}>
+      <Text style={[styles.title, { color: theme.colors.text.primary }]}>Insights</Text>
+    </View>
+  );
+};
 
 export const AppNavigator = () => {
   const { user, loading } = useAuth();
+  const theme = useTheme();
 
   if (loading) {
     return (
       <SafeAreaProvider>
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.primary }]}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaProvider>
@@ -69,7 +86,7 @@ export const AppNavigator = () => {
               },
             }}
           >
-            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Home" component={ComponentShowcase} />
             <Tab.Screen name="Transactions" component={TransactionsScreen} />
             <Tab.Screen name="Budgets" component={BudgetsScreen} />
             <Tab.Screen name="Accounts" component={AccountsScreen} />
@@ -88,17 +105,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
   },
   title: {
-    fontSize: theme.typography.h2.fontSize,
-    fontWeight: theme.typography.h2.fontWeight,
-    color: theme.colors.text.primary,
+    fontSize: 24,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
   },
 });

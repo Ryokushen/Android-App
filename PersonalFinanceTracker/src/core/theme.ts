@@ -1,4 +1,4 @@
-export const theme = {
+export const lightTheme = {
   colors: {
     primary: '#a855f7',
     accent: '#14b8a6',
@@ -10,6 +10,18 @@ export const theme = {
       primary: '#ffffff',
       secondary: '#f5f5f4',
       tertiary: '#e7e5e4',
+    },
+    
+    surface: {
+      default: '#ffffff',
+      elevated: '#ffffff',
+      overlay: 'rgba(0, 0, 0, 0.5)',
+    },
+    
+    border: {
+      light: '#e7e5e4',
+      default: '#d6d3d1',
+      dark: '#a8a29e',
     },
     
     text: {
@@ -117,3 +129,39 @@ export const theme = {
     },
   },
 };
+
+export const darkTheme = {
+  ...lightTheme,
+  colors: {
+    ...lightTheme.colors,
+    
+    background: {
+      primary: '#1c1917',
+      secondary: '#292524',
+      tertiary: '#44403c',
+    },
+    
+    surface: {
+      default: '#292524',
+      elevated: '#44403c',
+      overlay: 'rgba(0, 0, 0, 0.7)',
+    },
+    
+    text: {
+      primary: '#fafaf9',
+      secondary: '#d6d3d1',
+      tertiary: '#a8a29e',
+      inverse: '#1c1917',
+    },
+    
+    border: {
+      light: '#44403c',
+      default: '#57534e',
+      dark: '#78716c',
+    },
+  },
+};
+
+export const theme = lightTheme;
+
+export type Theme = typeof lightTheme;

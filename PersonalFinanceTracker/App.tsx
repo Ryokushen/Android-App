@@ -3,6 +3,7 @@ import { AppNavigator } from '@/navigation/AppNavigator';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '@/features/auth/AuthContext';
+import { ThemeProvider } from '@/core/theme/ThemeProvider';
 import { setupDeepLinking } from '@/utils/deepLinking';
 
 const queryClient = new QueryClient({
@@ -24,9 +25,11 @@ function App(): React.JSX.Element {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppNavigator />
+          </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
