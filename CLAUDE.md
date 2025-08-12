@@ -240,22 +240,46 @@ Completed archive: /completed-tasks.md (move completed sections here)
 - **Charts:** Gradient fills, soft animations, touch interactions
 - **Forms:** Numeric keyboard for amounts, date pickers, category selectors
 
+## Architecture Overview
+
+### Technology Stack
+- **Frontend Framework:** React Native 0.73+ (TypeScript)
+- **State Management:** React Query (TanStack Query) + Zustand
+- **Navigation:** React Navigation v6
+- **Backend:** Supabase (PostgreSQL, Auth, Real-time)
+- **UI Components:** Custom components with react-native-svg
+- **Animations:** react-native-reanimated v3
+- **Charts:** Custom SVG components
+- **Forms:** react-hook-form + zod validation
+- **Offline Support:** AsyncStorage + SQLite
+
+### Feature Modules from Mockup
+1. **Home Dashboard**: Net worth visualization, quick stats, upcoming renewals
+2. **Transactions Tab**: Search, filter, swipe actions for categorization
+3. **Budgets Tab**: Visual bar charts, budget cards with warnings
+4. **Accounts Tab**: Balance tracking, APR, payment dates, interest YTD
+5. **Insights Tab**: Spending donut chart, cash flow bars, key metrics
+
 ## Database Schema
 
 ### Core Tables
 ```sql
 -- All tables include user_id with RLS policies
-accounts (id, user_id, name, type, balance, apr, credit_limit, archived_at)
+accounts (id, user_id, name, type, balance, apr, credit_limit, archived_at, is_primary)
 transactions (id, user_id, ts, amount, description, txn_type, account_id, category_id, meta)
 categories (id, user_id, name, parent_id)
-budgets (id, user_id, name, period, start_date, end_date, limit)
+budgets (id, user_id, name, period, start_date, end_date, limit_amount)
 budget_entries (id, user_id, budget_id, category_id)
-subscriptions (id, user_id, name, cost, frequency, payment_method, next_renewal)
-debts (id, user_id, name, type, principal, apr, min_payment, due_day, snowball_order)
+subscriptions (id, user_id, name, cost, frequency, payment_method, next_renewal, is_active)
+debts (id, user_id, name, type, principal, apr, min_payment, due_day, snowball_order, account_id)
 investment_accounts (id, user_id, name, type)
 holdings (id, user_id, investment_account_id, symbol, qty, cost_basis, current_value)
-goals (id, user_id, name, target, current, color)
+goals (id, user_id, name, target, current, color, target_date)
 feature_flags (key, enabled, user_id)
+
+-- Views for common aggregations
+v_budget_spend (budget_id, spent, remaining, percentage_used)
+v_net_worth (user_id, assets, liabilities, net_worth)
 ```
 
 ## Common Development Commands
@@ -320,12 +344,69 @@ npm run type-check
 // └── index.ts        # Public API
 ```
 
-### Creating a Supabase Query Hook
-```typescript
-// Example: useAccounts hook
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/data/supabase';
+### API Integration Patterns
 
+#### Supabase Client Setup
+```typescript
+// src/data/supabase.ts
+import { createClient } from '@supabase/supabase-js'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Database } from '@/types/supabase'
+
+export const supabase = createClient<Database>(
+  Config.SUPABASE_URL!,
+  Config.SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  }
+)
+```
+
+#### React Query Setup for React Native
+```typescript
+// src/data/queryClient.ts
+import { QueryClient } from '@tanstack/react-query'
+import NetInfo from '@react-native-community/netinfo'
+import { onlineManager, focusManager } from '@tanstack/react-query'
+import { AppState, Platform } from 'react-native'
+
+// Configure online status management
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected)
+  })
+})
+
+// Configure focus management
+function onAppStateChange(status: AppStateStatus) {
+  if (Platform.OS !== 'web') {
+    focusManager.setFocused(status === 'active')
+  }
+}
+
+AppState.addEventListener('change', onAppStateChange)
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 24 * 60 * 60 * 1000, // 24 hours
+      retry: 3,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    },
+  },
+})
+```
+
+#### Query Hook Examples
+```typescript
+// Basic query
 export const useAccounts = () => {
   return useQuery({
     queryKey: ['accounts'],
@@ -333,30 +414,189 @@ export const useAccounts = () => {
       const { data, error } = await supabase
         .from('accounts')
         .select('*')
-        .order('name');
+        .order('is_primary', { ascending: false })
+        .order('name')
       
-      if (error) throw error;
-      return data;
+      if (error) throw error
+      return data
     },
-  });
-};
+  })
+}
+
+// Query with filters
+export const useTransactions = (filters?: TransactionFilters) => {
+  return useQuery({
+    queryKey: ['transactions', filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('transactions')
+        .select(`
+          *,
+          account:accounts(id, name),
+          category:categories(id, name)
+        `)
+        .order('ts', { ascending: false })
+      
+      if (filters?.accountId) {
+        query = query.eq('account_id', filters.accountId)
+      }
+      
+      if (filters?.dateRange) {
+        query = query
+          .gte('ts', filters.dateRange.start)
+          .lte('ts', filters.dateRange.end)
+      }
+      
+      const { data, error } = await query
+      if (error) throw error
+      return data
+    },
+    enabled: true,
+  })
+}
+```
+
+#### Mutation Patterns
+```typescript
+// Basic mutation with optimistic updates
+export const useUpdateTransaction = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return data
+    },
+    onMutate: async (updatedTransaction) => {
+      await queryClient.cancelQueries({ queryKey: ['transactions'] })
+      
+      const previousTransactions = queryClient.getQueryData(['transactions'])
+      
+      queryClient.setQueryData(['transactions'], (old: any[]) => {
+        return old?.map(txn => 
+          txn.id === updatedTransaction.id 
+            ? { ...txn, ...updatedTransaction }
+            : txn
+        )
+      })
+      
+      return { previousTransactions }
+    },
+    onError: (err, newTransaction, context) => {
+      if (context?.previousTransactions) {
+        queryClient.setQueryData(['transactions'], context.previousTransactions)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+}
+```
+
+#### Real-time Subscriptions
+```typescript
+// src/features/transactions/hooks/useRealtimeTransactions.ts
+export const useRealtimeTransactions = () => {
+  const queryClient = useQueryClient()
+  
+  useEffect(() => {
+    const channel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            queryClient.setQueryData(['transactions'], (old: any[]) => {
+              return [payload.new, ...(old || [])]
+            })
+          } else if (payload.eventType === 'UPDATE') {
+            queryClient.setQueryData(['transactions'], (old: any[]) => {
+              return old?.map(txn => 
+                txn.id === payload.new.id ? payload.new : txn
+              ) || []
+            })
+          }
+        }
+      )
+      .subscribe()
+    
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
+}
 ```
 
 ### Offline-First Pattern
 ```typescript
-// Queue offline mutations
-const mutation = useMutation({
-  mutationFn: async (transaction) => {
-    if (!isOnline) {
-      await queueOfflineTransaction(transaction);
-      return transaction;
+// Offline Queue Manager
+class OfflineQueueManager {
+  private readonly QUEUE_KEY = '@offline_queue'
+  
+  async addToQueue(operation: QueuedOperation) {
+    const queue = await this.getQueue()
+    queue.push({ ...operation, id: uuidv4(), timestamp: Date.now() })
+    await AsyncStorage.setItem(this.QUEUE_KEY, JSON.stringify(queue))
+    this.syncIfOnline()
+    return operation
+  }
+  
+  async syncIfOnline() {
+    const state = await NetInfo.fetch()
+    if (state.isConnected) {
+      await this.processQueue()
     }
-    return await saveTransaction(transaction);
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries(['transactions']);
-  },
-});
+  }
+}
+
+// Offline-first mutation hook
+export const useOfflineCreateTransaction = () => {
+  const queryClient = useQueryClient()
+  const [isOnline, setIsOnline] = useState(true)
+  
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(!!state.isConnected)
+    })
+    return unsubscribe
+  }, [])
+  
+  return useMutation({
+    mutationFn: async (transaction: TablesInsert<'transactions'>) => {
+      if (!isOnline) {
+        const queued = await offlineQueue.addToQueue({
+          type: 'create',
+          table: 'transactions',
+          data: transaction,
+        })
+        return { ...transaction, id: queued.id, synced: false }
+      }
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert(transaction)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return { ...data, synced: true }
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['transactions'], (old: any[]) => {
+        return [data, ...(old || [])]
+      })
+    },
+  })
+}
 ```
 
 ### Form Validation Pattern
@@ -378,11 +618,71 @@ const transactionSchema = z.object({
 
 ## Performance Guidelines
 
+### Core Metrics
 - **Target:** <100ms tap-to-first-feedback
 - **Lists:** Use FlatList with getItemLayout for known heights
 - **Images:** Lazy load, use appropriate formats
 - **Charts:** Memoize calculations, use InteractionManager for heavy renders
 - **Navigation:** Lazy load screens, use React.memo for expensive components
+
+### Performance Optimizations
+
+#### Query Key Factory Pattern
+```typescript
+// src/data/queryKeys.ts
+export const queryKeys = {
+  all: ['finance'] as const,
+  
+  accounts: () => [...queryKeys.all, 'accounts'] as const,
+  account: (id: string) => [...queryKeys.accounts(), id] as const,
+  
+  transactions: () => [...queryKeys.all, 'transactions'] as const,
+  transaction: (id: string) => [...queryKeys.transactions(), id] as const,
+  transactionsByAccount: (accountId: string) => 
+    [...queryKeys.transactions(), 'by-account', accountId] as const,
+  
+  budgets: () => [...queryKeys.all, 'budgets'] as const,
+  budget: (id: string) => [...queryKeys.budgets(), id] as const,
+  budgetSpending: (id: string) => [...queryKeys.budget(id), 'spending'] as const,
+}
+```
+
+#### React Native Screen Focus Management
+```typescript
+// src/hooks/useRefreshOnFocus.ts
+import { useCallback, useRef } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
+
+export const useRefreshOnFocus = <T>(
+  refetch: () => Promise<T>
+) => {
+  const firstTimeRef = useRef(true)
+  
+  useFocusEffect(
+    useCallback(() => {
+      if (firstTimeRef.current) {
+        firstTimeRef.current = false
+        return
+      }
+      
+      refetch()
+    }, [refetch])
+  )
+}
+```
+
+#### List Virtualization
+```typescript
+// Use FlashList for large lists
+import { FlashList } from "@shopify/flash-list"
+
+<FlashList
+  data={transactions}
+  renderItem={renderTransaction}
+  estimatedItemSize={80}
+  keyExtractor={(item) => item.id}
+/>
+```
 
 ## Security Patterns
 
@@ -444,21 +744,157 @@ const credentials = await Keychain.getInternetCredentials('app.finance.tracker')
 
 ## Testing Strategy
 
-### Unit Tests
-- Calculation helpers (net worth, budget percentages)
-- Data formatters (currency, dates)
-- Validation functions
+### Testing Stack
+```json
+{
+  "devDependencies": {
+    "@testing-library/react-native": "^12.4.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-hooks": "^8.0.1",
+    "jest": "^29.7.0",
+    "jest-expo": "^49.0.0",
+    "detox": "^20.13.0",
+    "nock": "^13.3.0",
+    "msw": "^2.0.0"
+  }
+}
+```
 
-### Integration Tests
-- Supabase queries and mutations
-- Offline sync logic
-- Auth flow
+### Jest Configuration
+```javascript
+// jest.config.js
+module.exports = {
+  preset: 'jest-expo',
+  setupFilesAfterEnv: [
+    '@testing-library/jest-native/extend-expect',
+    '<rootDir>/jest.setup.js',
+  ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/types/**',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
+  },
+}
+```
 
-### E2E Tests (Detox)
-- Add transaction flow
-- Budget creation and updates
-- Account balance updates
-- Tab navigation
+### Test Examples
+
+#### Component Testing
+```typescript
+// src/features/accounts/__tests__/AccountCard.test.tsx
+import { render, fireEvent } from '@testing-library/react-native'
+import { AccountCard } from '../components/AccountCard'
+
+describe('AccountCard', () => {
+  it('renders account information correctly', () => {
+    const { getByText } = render(
+      <AccountCard account={mockAccount} />
+    )
+    
+    expect(getByText(mockAccount.name)).toBeTruthy()
+    expect(getByText('$1,234.56')).toBeTruthy()
+  })
+  
+  it('handles press events', () => {
+    const onPress = jest.fn()
+    const { getByTestId } = render(
+      <AccountCard 
+        account={mockAccount} 
+        onPress={onPress}
+        testID="account-card"
+      />
+    )
+    
+    fireEvent.press(getByTestId('account-card'))
+    expect(onPress).toHaveBeenCalledWith(mockAccount)
+  })
+})
+```
+
+#### Hook Testing
+```typescript
+// src/features/accounts/__tests__/useAccounts.test.ts
+import { renderHook, waitFor } from '@testing-library/react-native'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useAccounts } from '../hooks/useAccounts'
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  
+  return ({ children }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  )
+}
+
+describe('useAccounts', () => {
+  it('fetches accounts successfully', async () => {
+    const { result } = renderHook(() => useAccounts(), {
+      wrapper: createWrapper(),
+    })
+    
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+    
+    expect(result.current.data).toHaveLength(3)
+  })
+})
+```
+
+#### E2E Testing with Detox
+```javascript
+// e2e/tests/transactions.e2e.js
+describe('Transaction Flow', () => {
+  beforeAll(async () => {
+    await device.launchApp()
+    await signIn('test@example.com', 'password123')
+  })
+  
+  it('should add a new transaction', async () => {
+    await element(by.id('tab-transactions')).tap()
+    await element(by.id('add-transaction-fab')).tap()
+    
+    await element(by.id('amount-input')).typeText('25.50')
+    await element(by.id('description-input')).typeText('Lunch')
+    await element(by.id('category-selector')).tap()
+    await element(by.text('Food & Dining')).tap()
+    
+    await element(by.id('save-transaction')).tap()
+    
+    await expect(element(by.text('Lunch'))).toBeVisible()
+    await expect(element(by.text('$25.50'))).toBeVisible()
+  })
+})
+```
+
+### Testing Commands
+```json
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --testMatch='**/*.integration.test.{ts,tsx}'",
+    "e2e:build:android": "detox build -c android.emu.debug",
+    "e2e:test:android": "detox test -c android.emu.debug"
+  }
+}
+```
 
 ## Feature Flags
 
