@@ -173,6 +173,7 @@ export const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigati
         onPress={() => console.log('Add transaction')}
         label="Add Transaction"
         variant="extended"
+        gradient={true}
       />
     </View>
   );

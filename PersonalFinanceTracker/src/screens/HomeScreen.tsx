@@ -357,6 +357,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         icon="add"
         label="Add Transaction"
         variant="extended"
+        gradient={true}
         onPress={() => navigation.navigate('AddTransaction')}
       />
     </View>

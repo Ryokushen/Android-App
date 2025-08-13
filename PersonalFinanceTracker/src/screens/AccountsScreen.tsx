@@ -181,6 +181,7 @@ export const AccountsScreen: React.FC<AccountsScreenProps> = ({ navigation }) =>
         onPress={() => console.log('Add account')}
         label="Account"
         variant="extended"
+        gradient={true}
       />
     </View>
   );

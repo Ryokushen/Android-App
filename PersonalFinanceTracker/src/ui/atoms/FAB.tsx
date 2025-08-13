@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Text,
   ViewStyle,
+  View,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -12,6 +13,7 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { useTheme } from '../../hooks/useTheme';
 import { Icon } from './Icon';
 
@@ -24,6 +26,7 @@ export interface FABProps {
   visible?: boolean;
   style?: ViewStyle;
   color?: string;
+  gradient?: boolean;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -37,6 +40,7 @@ export const FAB: React.FC<FABProps> = ({
   visible = true,
   style,
   color,
+  gradient = false,
 }) => {
   const theme = useTheme();
   const scale = useSharedValue(0);
@@ -99,6 +103,89 @@ export const FAB: React.FC<FABProps> = ({
   const size = getSize();
   const backgroundColor = color || theme.colors.primary;
   
+  const fabContent = (
+    <Animated.View style={[styles.content, pressAnimatedStyle]}>
+      <Icon
+        name={icon}
+        size={24}
+        color={theme.colors.white}
+      />
+      {variant === 'extended' && label && (
+        <Text
+          style={[
+            styles.label,
+            {
+              color: theme.colors.white,
+              marginLeft: 8,
+            },
+            theme.typography.button,
+          ]}
+        >
+          {label}
+        </Text>
+      )}
+    </Animated.View>
+  );
+  
+  if (gradient) {
+    const fabWidth = variant === 'extended' && label ? 160 : size;
+    
+    return (
+      <AnimatedPressable
+        onPress={onPress}
+        style={[
+          styles.fab,
+          getPosition(),
+          {
+            width: fabWidth,
+            height: size,
+            borderRadius: size / 2,
+            overflow: 'hidden',
+            backgroundColor: '#a855f7', // Fallback color
+            ...theme.shadows.lg,
+          },
+          animatedStyle,
+          style,
+        ]}
+        android_ripple={{
+          color: theme.colors.white + '30',
+          borderless: false,
+        }}
+      >
+        {/* Try SVG gradient, but render content either way */}
+        <View style={StyleSheet.absoluteFillObject}>
+          <Svg width={fabWidth} height={size} style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <LinearGradient id="fabGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#a855f7" />
+                <Stop offset="50%" stopColor="#ec4899" />
+                <Stop offset="100%" stopColor="#f97316" />
+              </LinearGradient>
+            </Defs>
+            <Rect
+              x="0"
+              y="0"
+              width={fabWidth}
+              height={size}
+              fill="url(#fabGradient)"
+              rx={size / 2}
+            />
+          </Svg>
+        </View>
+        <View style={[
+          StyleSheet.absoluteFillObject,
+          {
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: variant === 'extended' && label ? 20 : 0,
+          }
+        ]}>
+          {fabContent}
+        </View>
+      </AnimatedPressable>
+    );
+  }
+  
   return (
     <AnimatedPressable
       onPress={onPress}
@@ -121,27 +208,7 @@ export const FAB: React.FC<FABProps> = ({
         borderless: false,
       }}
     >
-      <Animated.View style={[styles.content, pressAnimatedStyle]}>
-        <Icon
-          name={icon}
-          size={24}
-          color={theme.colors.white}
-        />
-        {variant === 'extended' && label && (
-          <Text
-            style={[
-              styles.label,
-              {
-                color: theme.colors.white,
-                marginLeft: 8,
-              },
-              theme.typography.button,
-            ]}
-          >
-            {label}
-          </Text>
-        )}
-      </Animated.View>
+      {fabContent}
     </AnimatedPressable>
   );
 };

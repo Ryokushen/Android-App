@@ -130,6 +130,7 @@ export const BudgetsScreen: React.FC<BudgetsScreenProps> = ({ navigation }) => {
         onPress={() => console.log('Create budget')}
         label="Budget"
         variant="extended"
+        gradient={true}
       />
     </View>
   );
