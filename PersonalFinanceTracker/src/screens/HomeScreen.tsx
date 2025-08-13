@@ -160,37 +160,46 @@ const GoalRing: React.FC<{ size?: number, thickness?: number, pct?: number, colo
   const len = (p / 100) * C;
   
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <Defs>
-        <LinearGradient id={`goal-gradient-${color}`}>
-          <Stop offset="0%" stopColor={color} />
-          <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
-        </LinearGradient>
-      </Defs>
-      <G transform={`translate(${size / 2}, ${size / 2})`}>
-        <Circle r={r} fill="none" stroke="#fef3c7" strokeWidth={thickness} opacity="0.5" />
-        <Circle 
-          r={r} 
-          fill="none" 
-          stroke={`url(#goal-gradient-${color})`} 
-          strokeWidth={thickness} 
-          strokeDasharray={`${len} ${C - len}`} 
-          transform="rotate(-90)"
-          strokeLinecap="round"
-        />
-        <Text 
-          x="0" 
-          y="0" 
-          textAnchor="middle" 
-          fill="#78716c" 
-          fontSize="14" 
-          fontWeight="bold"
-          alignmentBaseline="middle"
-        >
+    <View style={{ position: 'relative', width: size, height: size }}>
+      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <Defs>
+          <LinearGradient id={`goal-gradient-${color}`}>
+            <Stop offset="0%" stopColor={color} />
+            <Stop offset="100%" stopColor={color} stopOpacity="0.3" />
+          </LinearGradient>
+        </Defs>
+        <G transform={`translate(${size / 2}, ${size / 2})`}>
+          <Circle r={r} fill="none" stroke="#fef3c7" strokeWidth={thickness} opacity="0.5" />
+          <Circle 
+            r={r} 
+            fill="none" 
+            stroke={`url(#goal-gradient-${color})`} 
+            strokeWidth={thickness} 
+            strokeDasharray={`${len} ${C - len}`} 
+            transform="rotate(-90)"
+            strokeLinecap="round"
+          />
+        </G>
+      </Svg>
+      {/* Use absolute positioning for perfect centering */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <Text style={{
+          fontSize: 14,
+          fontWeight: 'bold',
+          color: '#78716c'
+        }}>
           {Math.round(p)}%
         </Text>
-      </G>
-    </Svg>
+      </View>
+    </View>
   );
 };
 
