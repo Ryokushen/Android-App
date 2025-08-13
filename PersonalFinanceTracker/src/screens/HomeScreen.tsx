@@ -354,9 +354,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </ScrollView>
       
       <FAB
-        icon="add"
         label="Add Transaction"
         variant="extended"
+        gradient={{
+          colors: ['#a855f7', '#ec4899'],
+          start: { x: 0, y: 0 },
+          end: { x: 1, y: 0 }
+        }}
         onPress={() => navigation.navigate('AddTransaction')}
       />
     </View>
