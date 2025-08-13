@@ -191,6 +191,32 @@ describe('AccountCard', () => {
     expect(getByText('25% utilized')).toBeTruthy()
   })
 })
+
+// src/features/home/__tests__/WealthCard.test.tsx
+import { render } from '@testing-library/react-native'
+import { WealthCard } from '../components/WealthCard' // Assuming you create this component
+import { mockData } from '@/__tests__/fixtures/homeData'
+
+describe('WealthCard', () => {
+  it('renders net worth and stats correctly', () => {
+    const { getByText } = render(<WealthCard data={mockData} />);
+    expect(getByText('$17,515.27')).toBeTruthy();
+    expect(getByText('Assets')).toBeTruthy();
+    expect(getByText('$32,511.05')).toBeTruthy();
+    expect(getByText('Debt')).toBeTruthy();
+    expect(getByText('$14,995.78')).toBeTruthy();
+  });
+});
+
+// src/features/home/__tests__/GoalRing.test.tsx
+import { GoalRing } from '../components/GoalRing'; // Assuming you create this component
+
+describe('GoalRing', () => {
+  it('renders the correct percentage', () => {
+    const { getByText } = render(<GoalRing pct={62} />);
+    expect(getByText('62%')).toBeTruthy();
+  });
+});
 ```
 
 ### Hook Testing
