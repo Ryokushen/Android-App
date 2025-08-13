@@ -171,7 +171,7 @@ export const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigati
       <FAB
         icon={AppIcons.add}
         onPress={() => console.log('Add transaction')}
-        label="Transaction"
+        label="Add Transaction"
         variant="extended"
       />
     </View>

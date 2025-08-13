@@ -354,8 +354,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </ScrollView>
       
       <FAB
-        icon="plus"
+        icon="add"
         label="Add Transaction"
+        variant="extended"
         onPress={() => navigation.navigate('AddTransaction')}
       />
     </View>
