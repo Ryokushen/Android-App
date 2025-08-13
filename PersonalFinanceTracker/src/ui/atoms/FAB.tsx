@@ -12,12 +12,11 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { Icon } from './Icon';
 
 export interface FABProps {
-  icon?: string;
+  icon: string;
   onPress: () => void;
   label?: string;
   variant?: 'standard' | 'extended' | 'mini';
@@ -25,11 +24,6 @@ export interface FABProps {
   visible?: boolean;
   style?: ViewStyle;
   color?: string;
-  gradient?: {
-    colors: string[];
-    start?: { x: number; y: number };
-    end?: { x: number; y: number };
-  };
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -43,7 +37,6 @@ export const FAB: React.FC<FABProps> = ({
   visible = true,
   style,
   color,
-  gradient,
 }) => {
   const theme = useTheme();
   const scale = useSharedValue(0);
@@ -106,84 +99,49 @@ export const FAB: React.FC<FABProps> = ({
   const size = getSize();
   const backgroundColor = color || theme.colors.primary;
   
-  const fabContent = (
-    <Animated.View style={[styles.content, pressAnimatedStyle]}>
-      {icon && (
-        <Icon
-          name={icon}
-          size={24}
-          color={theme.colors.white}
-        />
-      )}
-      {variant === 'extended' && label && (
-        <Text
-          style={[
-            styles.label,
-            {
-              color: theme.colors.white,
-              marginLeft: icon ? 8 : 0,
-            },
-            theme.typography.button,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
-    </Animated.View>
-  );
-  
-  const fabStyle = [
-    styles.fab,
-    getPosition(),
-    {
-      backgroundColor: gradient ? 'transparent' : backgroundColor,
-      width: variant === 'extended' && label ? 'auto' : size,
-      height: size,
-      borderRadius: size / 2,
-      paddingHorizontal: variant === 'extended' && label ? 16 : 0,
-      ...theme.shadows.lg,
-    },
-    animatedStyle,
-    style,
-  ];
-  
-  if (gradient) {
-    return (
-      <AnimatedPressable
-        onPress={onPress}
-        style={fabStyle}
-        android_ripple={{
-          color: theme.colors.white + '30',
-          borderless: false,
-        }}
-      >
-        <LinearGradient
-          colors={gradient.colors}
-          start={gradient.start || { x: 0, y: 0 }}
-          end={gradient.end || { x: 1, y: 0 }}
-          style={[
-            styles.gradientContainer,
-            {
-              borderRadius: size / 2,
-            }
-          ]}
-        >
-          {fabContent}
-        </LinearGradient>
-      </AnimatedPressable>
-    );
-  }
-  
   return (
     <AnimatedPressable
       onPress={onPress}
-      style={fabStyle}
+      style={[
+        styles.fab,
+        getPosition(),
+        {
+          backgroundColor,
+          width: variant === 'extended' && label ? 'auto' : size,
+          height: size,
+          borderRadius: size / 2,
+          paddingHorizontal: variant === 'extended' && label ? 20 : 0,
+          ...theme.shadows.lg,
+        },
+        animatedStyle,
+        style,
+      ]}
       android_ripple={{
         color: theme.colors.white + '30',
         borderless: false,
       }}
     >
-      {fabContent}
+      <Animated.View style={[styles.content, pressAnimatedStyle]}>
+        <Icon
+          name={icon}
+          size={24}
+          color={theme.colors.white}
+        />
+        {variant === 'extended' && label && (
+          <Text
+            style={[
+              styles.label,
+              {
+                color: theme.colors.white,
+                marginLeft: 8,
+              },
+              theme.typography.button,
+            ]}
+          >
+            {label}
+          </Text>
+        )}
+      </Animated.View>
     </AnimatedPressable>
   );
 };
@@ -202,10 +160,5 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '500',
-  },
-  gradientContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

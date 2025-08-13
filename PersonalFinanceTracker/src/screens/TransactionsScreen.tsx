@@ -169,14 +169,10 @@ export const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigati
       />
       
       <FAB
+        icon={AppIcons.add}
         onPress={() => console.log('Add transaction')}
         label="Add Transaction"
         variant="extended"
-        gradient={{
-          colors: ['#a855f7', '#ec4899'],
-          start: { x: 0, y: 0 },
-          end: { x: 1, y: 0 }
-        }}
       />
     </View>
   );
